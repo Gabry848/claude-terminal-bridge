@@ -70,16 +70,20 @@ class TerminalBridge {
 		this.statusBarItem.show();
 	}
 
-	async connect(url?: string): Promise<void> {
+	async connect(url?: string, silent: boolean = false): Promise<void> {
 		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-			vscode.window.showWarningMessage('Already connected to MCP server');
+			if (!silent) {
+				vscode.window.showWarningMessage('Already connected to MCP server');
+			}
 			return;
 		}
 
 		const config = vscode.workspace.getConfiguration('claudeTerminalBridge');
 		const serverUrl = url || config.get<string>('mcpServerUrl') || 'ws://localhost:3000';
 
-		this.log(`Connecting to MCP server at ${serverUrl}...`);
+		if (!silent) {
+			this.log(`Connecting to MCP server at ${serverUrl}...`);
+		}
 
 		return new Promise((resolve, reject) => {
 			try {
@@ -90,7 +94,7 @@ class TerminalBridge {
 					this.isConnected = true;
 					this.updateStatusBar();
 					this.log('Connected to MCP server');
-					vscode.window.showInformationMessage('Connected to MCP server');
+					vscode.window.showInformationMessage('✓ Connected to MCP server');
 					resolve();
 				});
 
@@ -99,7 +103,9 @@ class TerminalBridge {
 				});
 
 				ws.on('error', (error) => {
-					this.log(`WebSocket error: ${error.message}`);
+					if (!silent) {
+						this.log(`WebSocket error: ${error.message}`);
+					}
 					this.isConnected = false;
 					this.updateStatusBar();
 					reject(error);
@@ -108,31 +114,39 @@ class TerminalBridge {
 				ws.on('close', () => {
 					this.isConnected = false;
 					this.updateStatusBar();
-					this.log('Disconnected from MCP server');
-					
+					if (!silent) {
+						this.log('Disconnected from MCP server');
+					}
+
 					// Auto-reconnect after 5 seconds
 					const config = vscode.workspace.getConfiguration('claudeTerminalBridge');
 					if (config.get<boolean>('autoConnect')) {
-						this.scheduleReconnect(serverUrl);
+						this.scheduleReconnect(serverUrl, silent);
 					}
 				});
 
 			} catch (error) {
-				this.log(`Failed to connect: ${error}`);
+				if (!silent) {
+					this.log(`Failed to connect: ${error}`);
+				}
 				reject(error);
 			}
 		});
 	}
 
-	private scheduleReconnect(url: string) {
+	private scheduleReconnect(url: string, silent: boolean = false) {
 		if (this.reconnectTimer) {
 			clearTimeout(this.reconnectTimer);
 		}
 
 		this.reconnectTimer = setTimeout(() => {
-			this.log('Attempting to reconnect...');
-			this.connect(url).catch((error) => {
-				this.log(`Reconnection failed: ${error.message}`);
+			if (!silent) {
+				this.log('Attempting to reconnect...');
+			}
+			this.connect(url, silent).catch((error) => {
+				if (!silent) {
+					this.log(`Reconnection failed: ${error.message}`);
+				}
 			});
 		}, 5000);
 	}
@@ -381,9 +395,12 @@ export function activate(context: vscode.ExtensionContext) {
 	// Auto-connect on startup if configured
 	const config = vscode.workspace.getConfiguration('claudeTerminalBridge');
 	if (config.get<boolean>('autoConnect')) {
+		const silentMode = config.get<boolean>('silentAutoConnect', true);
 		setTimeout(() => {
-			bridge.connect().catch((error) => {
-				console.error('Auto-connect failed:', error);
+			bridge.connect(undefined, silentMode).catch((error) => {
+				if (!silentMode) {
+					console.error('Auto-connect failed:', error);
+				}
 			});
 		}, 1000);
 	}

@@ -38,6 +38,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically connect to MCP server on startup"
+        },
+        "claudeTerminalBridge.silentAutoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Don't show errors when auto-connect fails (only show success messages)"
         }
       }
     }
