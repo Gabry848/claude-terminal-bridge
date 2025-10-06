@@ -14,10 +14,33 @@
   "contributes": {
     "commands": [
       {
-        "command": "claude-terminal-bridge.helloWorld",
-        "title": "Hello World"
+        "command": "claude-terminal-bridge.connect",
+        "title": "Claude Terminal Bridge: Connect to MCP Server"
+      },
+      {
+        "command": "claude-terminal-bridge.disconnect",
+        "title": "Claude Terminal Bridge: Disconnect from MCP Server"
+      },
+      {
+        "command": "claude-terminal-bridge.status",
+        "title": "Claude Terminal Bridge: Show Connection Status"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Claude Terminal Bridge",
+      "properties": {
+        "claudeTerminalBridge.mcpServerUrl": {
+          "type": "string",
+          "default": "ws://localhost:3000",
+          "description": "WebSocket URL of the MCP server"
+        },
+        "claudeTerminalBridge.autoConnect": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically connect to MCP server on startup"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -27,10 +50,14 @@
     "lint": "eslint src",
     "test": "vscode-test"
   },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
     "@types/vscode": "^1.104.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
+    "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "eslint": "^9.36.0",
