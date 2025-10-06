@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
-import WebSocket from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 
 interface MCPRequest {
 	type: 'execute' | 'create_terminal' | 'close_terminal' | 'ping';
@@ -25,13 +25,12 @@ interface MCPResponse {
 }
 
 class TerminalBridge {
-	private ws: WebSocket | null = null;
+	private wss: WebSocketServer | null = null;
+	private clients: Set<WebSocket> = new Set();
 	private terminals: Map<string, vscode.Terminal> = new Map();
 	private outputChannel: vscode.OutputChannel;
 	private statusBarItem: vscode.StatusBarItem;
 	private isConnected: boolean = false;
-	private reconnectTimer: NodeJS.Timeout | null = null;
-	private outputBuffers: Map<string, string> = new Map();
 
 	constructor(private context: vscode.ExtensionContext) {
 		this.outputChannel = vscode.window.createOutputChannel('Claude Terminal Bridge');
@@ -70,104 +69,98 @@ class TerminalBridge {
 		this.statusBarItem.show();
 	}
 
-	async connect(url?: string, silent: boolean = false): Promise<void> {
-		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+	async connect(port?: number, silent: boolean = false): Promise<void> {
+		if (this.wss) {
 			if (!silent) {
-				vscode.window.showWarningMessage('Already connected to MCP server');
+				vscode.window.showWarningMessage('Server is already running');
 			}
 			return;
 		}
 
 		const config = vscode.workspace.getConfiguration('claudeTerminalBridge');
-		const serverUrl = url || config.get<string>('mcpServerUrl') || 'ws://localhost:3000';
+		const serverPort = port || this.parsePort(config.get<string>('mcpServerUrl') || 'ws://localhost:3000');
 
 		if (!silent) {
-			this.log(`Connecting to MCP server at ${serverUrl}...`);
+			this.log(`Starting WebSocket server on port ${serverPort}...`);
 		}
 
 		return new Promise((resolve, reject) => {
 			try {
-				this.ws = new WebSocket(serverUrl);
-				const ws = this.ws; // Non-null reference per TypeScript
+				this.wss = new WebSocketServer({ port: serverPort });
 
-				ws.on('open', () => {
+				this.wss.on('listening', () => {
 					this.isConnected = true;
 					this.updateStatusBar();
-					this.log('Connected to MCP server');
-					vscode.window.showInformationMessage('✓ Connected to MCP server');
+					this.log(`WebSocket server listening on port ${serverPort}`);
+					vscode.window.showInformationMessage(`✓ WebSocket server started on port ${serverPort}`);
 					resolve();
 				});
 
-				ws.on('message', (data: WebSocket.Data) => {
-					this.handleMessage(data.toString());
+				this.wss.on('connection', (ws: WebSocket) => {
+					this.log('Client connected');
+					this.clients.add(ws);
+
+					ws.on('message', (data: WebSocket.Data) => {
+						this.handleMessage(data.toString(), ws);
+					});
+
+					ws.on('error', (error: Error) => {
+						this.log(`Client error: ${error.message}`);
+					});
+
+					ws.on('close', () => {
+						this.log('Client disconnected');
+						this.clients.delete(ws);
+					});
 				});
 
-				ws.on('error', (error) => {
+				this.wss.on('error', (error: Error) => {
 					if (!silent) {
-						this.log(`WebSocket error: ${error.message}`);
+						this.log(`Server error: ${error.message}`);
 					}
 					this.isConnected = false;
 					this.updateStatusBar();
 					reject(error);
 				});
 
-				ws.on('close', () => {
-					this.isConnected = false;
-					this.updateStatusBar();
-					if (!silent) {
-						this.log('Disconnected from MCP server');
-					}
-
-					// Auto-reconnect after 5 seconds
-					const config = vscode.workspace.getConfiguration('claudeTerminalBridge');
-					if (config.get<boolean>('autoConnect')) {
-						this.scheduleReconnect(serverUrl, silent);
-					}
-				});
-
 			} catch (error) {
 				if (!silent) {
-					this.log(`Failed to connect: ${error}`);
+					this.log(`Failed to start server: ${error}`);
 				}
 				reject(error);
 			}
 		});
 	}
 
-	private scheduleReconnect(url: string, silent: boolean = false) {
-		if (this.reconnectTimer) {
-			clearTimeout(this.reconnectTimer);
+	private parsePort(url: string): number {
+		try {
+			const urlObj = new URL(url);
+			return parseInt(urlObj.port) || 3000;
+		} catch {
+			return 3000;
 		}
-
-		this.reconnectTimer = setTimeout(() => {
-			if (!silent) {
-				this.log('Attempting to reconnect...');
-			}
-			this.connect(url, silent).catch((error) => {
-				if (!silent) {
-					this.log(`Reconnection failed: ${error.message}`);
-				}
-			});
-		}, 5000);
 	}
 
 	disconnect() {
-		if (this.reconnectTimer) {
-			clearTimeout(this.reconnectTimer);
-			this.reconnectTimer = null;
-		}
+		if (this.wss) {
+			// Close all client connections
+			for (const client of this.clients) {
+				client.close();
+			}
+			this.clients.clear();
 
-		if (this.ws) {
-			this.ws.close();
-			this.ws = null;
+			// Close the server
+			this.wss.close(() => {
+				this.log('WebSocket server stopped');
+			});
+			this.wss = null;
 			this.isConnected = false;
 			this.updateStatusBar();
-			this.log('Disconnected from MCP server');
-			vscode.window.showInformationMessage('Disconnected from MCP server');
+			vscode.window.showInformationMessage('WebSocket server stopped');
 		}
 	}
 
-	private handleMessage(message: string) {
+	private handleMessage(message: string, client: WebSocket) {
 		try {
 			const request: MCPRequest = JSON.parse(message);
 			this.log(`Received request: ${request.type} (ID: ${request.id})`);
@@ -177,19 +170,19 @@ class TerminalBridge {
 					this.sendResponse({
 						type: 'pong',
 						id: request.id
-					});
+					}, client);
 					break;
 
 				case 'create_terminal':
-					this.handleCreateTerminal(request);
+					this.handleCreateTerminal(request, client);
 					break;
 
 				case 'execute':
-					this.handleExecute(request);
+					this.handleExecute(request, client);
 					break;
 
 				case 'close_terminal':
-					this.handleCloseTerminal(request);
+					this.handleCloseTerminal(request, client);
 					break;
 
 				default:
@@ -197,14 +190,14 @@ class TerminalBridge {
 						type: 'error',
 						id: request.id,
 						data: { error: `Unknown request type: ${request.type}` }
-					});
+					}, client);
 			}
 		} catch (error) {
 			this.log(`Error handling message: ${error}`);
 		}
 	}
 
-	private handleCreateTerminal(request: MCPRequest) {
+	private handleCreateTerminal(request: MCPRequest, client: WebSocket) {
 		try {
 			const terminalName = request.data?.terminalName || `MCP Terminal ${this.terminals.size + 1}`;
 			const terminal = vscode.window.createTerminal({
@@ -225,17 +218,17 @@ class TerminalBridge {
 					terminalId: terminalId,
 					terminalName: terminalName
 				}
-			});
+			}, client);
 		} catch (error) {
 			this.sendResponse({
 				type: 'error',
 				id: request.id,
 				data: { error: `Failed to create terminal: ${error}` }
-			});
+			}, client);
 		}
 	}
 
-	private async handleExecute(request: MCPRequest) {
+	private async handleExecute(request: MCPRequest, client: WebSocket) {
 		try {
 			const command = request.data?.command;
 			const terminalId = request.data?.terminalId;
@@ -245,7 +238,7 @@ class TerminalBridge {
 					type: 'error',
 					id: request.id,
 					data: { error: 'No command provided' }
-				});
+				}, client);
 				return;
 			}
 
@@ -275,18 +268,18 @@ class TerminalBridge {
 				data: {
 					output: `Command executed: ${command}\nNote: Direct output capture requires custom pseudoterminal implementation.`
 				}
-			});
+			}, client);
 
 		} catch (error) {
 			this.sendResponse({
 				type: 'error',
 				id: request.id,
 				data: { error: `Failed to execute command: ${error}` }
-			});
+			}, client);
 		}
 	}
 
-	private handleCloseTerminal(request: MCPRequest) {
+	private handleCloseTerminal(request: MCPRequest, client: WebSocket) {
 		try {
 			const terminalId = request.data?.terminalId;
 
@@ -295,7 +288,7 @@ class TerminalBridge {
 					type: 'error',
 					id: request.id,
 					data: { error: 'No terminal ID provided' }
-				});
+				}, client);
 				return;
 			}
 
@@ -309,26 +302,26 @@ class TerminalBridge {
 					type: 'success',
 					id: request.id,
 					data: { output: `Terminal ${terminalId} closed` }
-				});
+				}, client);
 			} else {
 				this.sendResponse({
 					type: 'error',
 					id: request.id,
 					data: { error: `Terminal ${terminalId} not found` }
-				});
+				}, client);
 			}
 		} catch (error) {
 			this.sendResponse({
 				type: 'error',
 				id: request.id,
 				data: { error: `Failed to close terminal: ${error}` }
-			});
+			}, client);
 		}
 	}
 
-	private sendResponse(response: MCPResponse) {
-		if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-			this.ws.send(JSON.stringify(response));
+	private sendResponse(response: MCPResponse, client: WebSocket) {
+		if (client && client.readyState === WebSocket.OPEN) {
+			client.send(JSON.stringify(response));
 			this.log(`Sent response: ${response.type} (ID: ${response.id})`);
 		}
 	}
