@@ -52,6 +52,13 @@
           "command": "claude-terminal-bridge.selectTerminalFromContext",
           "group": "5_manage"
         }
+      ],
+      "editor/title/context": [
+        {
+          "command": "claude-terminal-bridge.selectTerminalFromContext",
+          "when": "resourceScheme == vscode-terminal",
+          "group": "1_manage"
+        }
       ]
     },
     "configuration": {
