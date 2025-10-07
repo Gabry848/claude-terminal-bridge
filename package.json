@@ -36,8 +36,24 @@
       {
         "command": "claude-terminal-bridge.status",
         "title": "Claude Terminal Bridge: Show Connection Status"
+      },
+      {
+        "command": "claude-terminal-bridge.selectTerminal",
+        "title": "Claude Terminal Bridge: Select Terminal"
+      },
+      {
+        "command": "claude-terminal-bridge.selectTerminalFromContext",
+        "title": "Select for Claude Terminal Bridge"
       }
     ],
+    "menus": {
+      "terminal/title/context": [
+        {
+          "command": "claude-terminal-bridge.selectTerminalFromContext",
+          "group": "5_manage"
+        }
+      ]
+    },
     "configuration": {
       "title": "Claude Terminal Bridge",
       "properties": {

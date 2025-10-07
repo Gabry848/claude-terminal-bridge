@@ -39,11 +39,11 @@ Perfect for:
 
 ## ✨ Features
 
-### 🎛️ **Full Terminal Control**
-Create, manage, and close VSCode terminals remotely through a simple WebSocket API.
+### 🎯 **Terminal Selection**
+User selects a terminal in VSCode that will be used for all MCP command execution.
 
 ### ⚡ **Real-time Command Execution**
-Execute shell commands directly from your MCP server with instant feedback.
+Execute shell commands on the selected terminal from your MCP server with instant feedback.
 
 ### 🔌 **WebSocket Server**
 Built-in WebSocket server (runs on port 3000 by default) for bidirectional communication.
@@ -52,10 +52,7 @@ Built-in WebSocket server (runs on port 3000 by default) for bidirectional commu
 Automatic reconnection on disconnection ensures your workflows never break.
 
 ### 📊 **Visual Status Indicator**
-Real-time connection status displayed in the VSCode status bar.
-
-### 🎯 **Multi-Terminal Support**
-Manage multiple terminal instances simultaneously with unique identifiers.
+Real-time connection status and selected terminal name displayed in the VSCode status bar.
 
 ---
 
@@ -88,11 +85,22 @@ Manage multiple terminal instances simultaneously with unique identifiers.
 ### Basic Usage
 
 1. **The extension starts automatically** when you open VSCode
-2. **Check the status bar** (bottom-right) for connection status:
-   - `$(plug) MCP Server Active` = Server is running
-   - `$(debug-disconnect) MCP Server Inactive` = Server is stopped
-3. **Connect your MCP client** to `ws://localhost:3000`
-4. **Start sending commands!**
+2. **Select a terminal** (two ways):
+
+   **Option A: Via Context Menu (Recommended)**
+   - Right-click on any terminal tab
+   - Select `"Select for Claude Terminal Bridge"`
+
+   **Option B: Via Command Palette**
+   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+   - Run `Claude Terminal Bridge: Select Terminal`
+   - Choose the terminal from the list
+
+3. **Check the status bar** (bottom-right) for connection status and selected terminal:
+   - `$(plug) MCP Connected | Terminal: <name>` = Server is running with terminal selected
+   - `$(debug-disconnect) MCP Disconnected | No terminal selected` = Server is stopped
+4. **Connect your MCP client** to `ws://localhost:3000`
+5. **Start sending commands!** All commands will execute on your selected terminal
 
 ---
 
@@ -120,13 +128,24 @@ Open VSCode settings (`Ctrl+,`) and search for "Claude Terminal Bridge":
 
 ## 📡 Available Commands
 
+### Command Palette Commands
+
 Access these commands via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
 | Command | Description |
 |---------|-------------|
+| `Claude Terminal Bridge: Select Terminal` | Select which terminal to use for MCP commands (shows list) |
 | `Claude Terminal Bridge: Start WebSocket Server` | Start the WebSocket server manually |
 | `Claude Terminal Bridge: Stop WebSocket Server` | Stop the WebSocket server |
-| `Claude Terminal Bridge: Show Connection Status` | Display current connection status |
+| `Claude Terminal Bridge: Show Connection Status` | Display current connection status and selected terminal |
+
+### Context Menu Commands
+
+Right-click on any terminal tab to access:
+
+| Command | Description |
+|---------|-------------|
+| `Select for Claude Terminal Bridge` | Quickly select the terminal for MCP commands |
 
 ---
 
@@ -185,25 +204,28 @@ Access these commands via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
 ### Supported Operations
 
-#### 1. Create Terminal
+#### 1. Execute Command
+Executes a command on the user-selected terminal.
+
+**Important**: The user must first select a terminal in VSCode using `Claude Terminal Bridge: Select Terminal` command.
+
+```json
+{
+  "type": "execute",
+  "id": "cmd-1",
+  "data": {
+    "command": "npm install"
+  }
+}
+```
+
+#### 2. Create Terminal
 ```json
 {
   "type": "create_terminal",
   "id": "terminal-1",
   "data": {
     "terminalName": "Build Terminal"
-  }
-}
-```
-
-#### 2. Execute Command
-```json
-{
-  "type": "execute",
-  "id": "cmd-1",
-  "data": {
-    "command": "npm install",
-    "terminalId": "terminal-1"
   }
 }
 ```
@@ -360,10 +382,11 @@ vsce package
 <details>
 <summary><strong>Commands not executing</strong></summary>
 
-- Verify the terminal was created successfully
-- Check that you're using the correct `terminalId`
+- **Most common issue**: No terminal selected. Run `Claude Terminal Bridge: Select Terminal` first
+- Verify a terminal exists in VSCode
 - Ensure JSON message format is valid
 - Look for error responses from the extension
+- Check that the selected terminal hasn't been closed
 </details>
 
 <details>

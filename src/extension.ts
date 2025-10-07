@@ -28,6 +28,7 @@ class TerminalBridge {
 	private wss: WebSocketServer | null = null;
 	private clients: Set<WebSocket> = new Set();
 	private terminals: Map<string, vscode.Terminal> = new Map();
+	private selectedTerminal: vscode.Terminal | null = null;
 	private outputChannel: vscode.OutputChannel;
 	private statusBarItem: vscode.StatusBarItem;
 	private isConnected: boolean = false;
@@ -41,6 +42,13 @@ class TerminalBridge {
 
 		// Monitor terminal closure
 		vscode.window.onDidCloseTerminal((terminal) => {
+			// Clear selected terminal if it was closed
+			if (this.selectedTerminal === terminal) {
+				this.selectedTerminal = null;
+				this.log('Selected terminal was closed');
+				this.updateStatusBar();
+			}
+
 			for (const [id, term] of this.terminals.entries()) {
 				if (term === terminal) {
 					this.terminals.delete(id);
@@ -57,14 +65,18 @@ class TerminalBridge {
 	}
 
 	private updateStatusBar() {
+		const terminalInfo = this.selectedTerminal
+			? ` | Terminal: ${this.selectedTerminal.name}`
+			: ' | No terminal selected';
+
 		if (this.isConnected) {
-			this.statusBarItem.text = '$(plug) MCP Connected';
+			this.statusBarItem.text = `$(plug) MCP Connected${terminalInfo}`;
 			this.statusBarItem.backgroundColor = undefined;
-			this.statusBarItem.tooltip = 'Connected to MCP Server';
+			this.statusBarItem.tooltip = `Connected to MCP Server\n${this.selectedTerminal ? `Selected: ${this.selectedTerminal.name}` : 'No terminal selected'}`;
 		} else {
-			this.statusBarItem.text = '$(debug-disconnect) MCP Disconnected';
+			this.statusBarItem.text = `$(debug-disconnect) MCP Disconnected${terminalInfo}`;
 			this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-			this.statusBarItem.tooltip = 'Disconnected from MCP Server';
+			this.statusBarItem.tooltip = `Disconnected from MCP Server\n${this.selectedTerminal ? `Selected: ${this.selectedTerminal.name}` : 'No terminal selected'}`;
 		}
 		this.statusBarItem.show();
 	}
@@ -231,7 +243,6 @@ class TerminalBridge {
 	private async handleExecute(request: MCPRequest, client: WebSocket) {
 		try {
 			const command = request.data?.command;
-			const terminalId = request.data?.terminalId;
 
 			if (!command) {
 				this.sendResponse({
@@ -242,23 +253,19 @@ class TerminalBridge {
 				return;
 			}
 
-			let terminal: vscode.Terminal;
-
-			if (terminalId && this.terminals.has(terminalId)) {
-				terminal = this.terminals.get(terminalId)!;
-			} else {
-				// Create a new terminal if none specified or not found
-				terminal = vscode.window.createTerminal({
-					name: 'MCP Terminal'
-				});
-				const newId = request.id;
-				this.terminals.set(newId, terminal);
+			if (!this.selectedTerminal) {
+				this.sendResponse({
+					type: 'error',
+					id: request.id,
+					data: { error: 'No terminal selected. Please select a terminal first using the "Select Terminal" command.' }
+				}, client);
+				return;
 			}
 
-			terminal.show();
-			terminal.sendText(command);
+			this.selectedTerminal.show();
+			this.selectedTerminal.sendText(command);
 
-			this.log(`Executed command: ${command}`);
+			this.log(`Executed command on ${this.selectedTerminal.name}: ${command}`);
 
 			// Simulate output capture (VSCode API doesn't provide direct terminal output access)
 			// In a real implementation, you'd need to use a custom pseudoterminal
@@ -266,7 +273,7 @@ class TerminalBridge {
 				type: 'success',
 				id: request.id,
 				data: {
-					output: `Command executed: ${command}\nNote: Direct output capture requires custom pseudoterminal implementation.`
+					output: `Command executed on ${this.selectedTerminal.name}: ${command}\nNote: Direct output capture requires custom pseudoterminal implementation.`
 				}
 			}, client);
 
@@ -326,16 +333,50 @@ class TerminalBridge {
 		}
 	}
 
+	async selectTerminal() {
+		const terminals = vscode.window.terminals;
+
+		if (terminals.length === 0) {
+			vscode.window.showWarningMessage('No terminals available. Please create a terminal first.');
+			return;
+		}
+
+		const items = terminals.map(terminal => ({
+			label: terminal.name,
+			terminal: terminal
+		}));
+
+		const selected = await vscode.window.showQuickPick(items, {
+			placeHolder: 'Select a terminal for MCP commands'
+		});
+
+		if (selected) {
+			this.selectedTerminal = selected.terminal;
+			this.log(`Selected terminal: ${selected.terminal.name}`);
+			this.updateStatusBar();
+			vscode.window.showInformationMessage(`✓ Terminal selected: ${selected.terminal.name}`);
+		}
+	}
+
+	selectTerminalFromContext(terminal: vscode.Terminal) {
+		this.selectedTerminal = terminal;
+		this.log(`Selected terminal from context menu: ${terminal.name}`);
+		this.updateStatusBar();
+		vscode.window.showInformationMessage(`✓ Terminal selected: ${terminal.name}`);
+	}
+
 	showStatus() {
 		const terminalCount = this.terminals.size;
 		const status = this.isConnected ? 'Connected' : 'Disconnected';
 		const config = vscode.workspace.getConfiguration('claudeTerminalBridge');
 		const serverUrl = config.get<string>('mcpServerUrl');
+		const selectedTerminalName = this.selectedTerminal ? this.selectedTerminal.name : 'None';
 
 		const message = `
 Claude Terminal Bridge Status:
 - Connection: ${status}
 - Server URL: ${serverUrl}
+- Selected Terminal: ${selectedTerminalName}
 - Active Terminals: ${terminalCount}
 		`;
 
@@ -382,6 +423,18 @@ export function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		vscode.commands.registerCommand('claude-terminal-bridge.status', () => {
 			bridge.showStatus();
+		})
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('claude-terminal-bridge.selectTerminal', async () => {
+			await bridge.selectTerminal();
+		})
+	);
+
+	context.subscriptions.push(
+		vscode.commands.registerCommand('claude-terminal-bridge.selectTerminalFromContext', (terminal: vscode.Terminal) => {
+			bridge.selectTerminalFromContext(terminal);
 		})
 	);
 
