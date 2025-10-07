@@ -1,0 +1,22 @@
+{
+  "name": "claude-terminal-bridge-example-server",
+  "version": "1.0.0",
+  "description": "Example MCP server for Claude Terminal Bridge",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "mcp",
+    "websocket",
+    "claude",
+    "terminal"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

@@ -1,186 +1,452 @@
 # Claude Terminal Bridge
 
-Un'estensione VSCode che permette a Claude (tramite server MCP) di controllare il terminale di VSCode via WebSocket.
+<p align="center">
+  <img src="images/icon.png" alt="Claude Terminal Bridge Logo" width="128" height="128">
+</p>
 
-## 🎯 Funzionalità
+<p align="center">
+  <strong>Enable Model Context Protocol (MCP) clients to control VSCode terminals via WebSocket</strong>
+</p>
 
-- **Controllo Terminale**: Crea, controlla e chiude terminali VSCode da remoto
-- **Esecuzione Comandi**: Esegui comandi shell direttamente dal server MCP
-- **Connessione WebSocket**: Comunicazione in tempo reale con il server MCP
-- **Auto-Riconnessione**: Riconnessione automatica in caso di disconnessione
-- **Status Bar**: Indicatore visivo dello stato di connessione
-- **Multi-Terminal**: Gestione di multipli terminali simultaneamente
+<p align="center">
+  <a href="https://marketplace.visualstudio.com/items?itemName=YOUR_PUBLISHER.claude-terminal-bridge">
+    <img src="https://img.shields.io/visual-studio-marketplace/v/YOUR_PUBLISHER.claude-terminal-bridge?style=flat-square" alt="VS Marketplace Version">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=YOUR_PUBLISHER.claude-terminal-bridge">
+    <img src="https://img.shields.io/visual-studio-marketplace/d/YOUR_PUBLISHER.claude-terminal-bridge?style=flat-square" alt="Downloads">
+  </a>
+  <a href="https://marketplace.visualstudio.com/items?itemName=YOUR_PUBLISHER.claude-terminal-bridge">
+    <img src="https://img.shields.io/visual-studio-marketplace/r/YOUR_PUBLISHER.claude-terminal-bridge?style=flat-square" alt="Rating">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License">
+  </a>
+</p>
 
-## 📋 Requisiti
+---
 
-- Visual Studio Code ^1.104.0
-- Un server MCP WebSocket in esecuzione (default: `ws://localhost:3000`)
-  - **Nota**: Il server MCP deve essere implementato separatamente seguendo le specifiche nel file `mcp_requirements.md`
+## 📖 Overview
 
-## 📦 Installazione
+**Claude Terminal Bridge** is a VSCode extension that exposes terminal control capabilities through a WebSocket server, enabling AI assistants and MCP (Model Context Protocol) clients to interact with your development environment seamlessly.
 
-### Sviluppo Locale
+Perfect for:
+- 🤖 AI-powered development workflows
+- 🔧 Automated build and deployment pipelines
+- 🧪 Remote testing and continuous integration
+- 📊 Development environment monitoring
 
-1. Clona o scarica questo repository
-2. Apri la cartella in VSCode
-3. Esegui `npm install` per installare le dipendenze
-4. Premi `F5` per avviare l'estensione in modalità debug
+---
 
-### Da VSIX (Produzione)
+## ✨ Features
 
-1. Compila l'estensione: `npm run compile`
-2. Crea il pacchetto VSIX: `vsce package`
-3. Installa in VSCode: `Extensions > ... > Install from VSIX...`
+### 🎛️ **Full Terminal Control**
+Create, manage, and close VSCode terminals remotely through a simple WebSocket API.
 
-## ⚙️ Configurazione
+### ⚡ **Real-time Command Execution**
+Execute shell commands directly from your MCP server with instant feedback.
 
-L'estensione può essere configurata tramite le impostazioni di VSCode:
+### 🔌 **WebSocket Server**
+Built-in WebSocket server (runs on port 3000 by default) for bidirectional communication.
+
+### 🔄 **Auto-Reconnection**
+Automatic reconnection on disconnection ensures your workflows never break.
+
+### 📊 **Visual Status Indicator**
+Real-time connection status displayed in the VSCode status bar.
+
+### 🎯 **Multi-Terminal Support**
+Manage multiple terminal instances simultaneously with unique identifiers.
+
+---
+
+## 🎬 Demo
+
+<!-- Replace with actual demo -->
+<p align="center">
+  <img src="images/demo.gif" alt="Claude Terminal Bridge Demo" width="800">
+</p>
+
+*Example: Creating a terminal and executing commands via WebSocket*
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+1. **Install from VSCode Marketplace** (Recommended)
+
+   Search for "Claude Terminal Bridge" in the Extensions view (`Ctrl+Shift+X`) and click Install.
+
+2. **Or install from VSIX**
+
+   Download the `.vsix` file from [Releases](https://github.com/Gabry848/claude-terminal-bridge/releases) and install via:
+   ```
+   Extensions → ⋯ → Install from VSIX...
+   ```
+
+### Basic Usage
+
+1. **The extension starts automatically** when you open VSCode
+2. **Check the status bar** (bottom-right) for connection status:
+   - `$(plug) MCP Server Active` = Server is running
+   - `$(debug-disconnect) MCP Server Inactive` = Server is stopped
+3. **Connect your MCP client** to `ws://localhost:3000`
+4. **Start sending commands!**
+
+---
+
+## ⚙️ Configuration
+
+Open VSCode settings (`Ctrl+,`) and search for "Claude Terminal Bridge":
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `claudeTerminalBridge.mcpServerUrl` | string | `ws://localhost:3000` | WebSocket server URL (port is configurable) |
+| `claudeTerminalBridge.autoConnect` | boolean | `true` | Automatically start server on VSCode startup |
+| `claudeTerminalBridge.silentAutoConnect` | boolean | `true` | Suppress error notifications during auto-start |
+
+### Example `settings.json`
 
 ```json
 {
   "claudeTerminalBridge.mcpServerUrl": "ws://localhost:3000",
-  "claudeTerminalBridge.autoConnect": true
+  "claudeTerminalBridge.autoConnect": true,
+  "claudeTerminalBridge.silentAutoConnect": true
 }
 ```
 
-- `mcpServerUrl`: URL del server MCP WebSocket
-- `autoConnect`: Connessione automatica all'avvio (default: true)
+---
 
-## 📡 Comandi
+## 📡 Available Commands
 
-L'estensione fornisce i seguenti comandi (accessibili dalla Command Palette `Ctrl+Shift+P`):
+Access these commands via Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
 
-- `Claude Terminal Bridge: Connect to MCP Server` - Connetti al server MCP
-- `Claude Terminal Bridge: Disconnect from MCP Server` - Disconnetti dal server MCP
-- `Claude Terminal Bridge: Show Connection Status` - Mostra lo stato della connessione
-
-## 🎯 Utilizzo
-
-1. **Avvia il tuo server MCP** (implementazione separata - vedi `mcp_requirements.md`)
-2. **L'estensione si connette automaticamente** all'avvio di VSCode (se `autoConnect` è abilitato)
-3. **Verifica la connessione** guardando la status bar in basso a destra:
-   - `$(plug) MCP Connected` - Connesso e pronto
-   - `$(debug-disconnect) MCP Disconnected` - Non connesso
-4. **Il server MCP può ora controllare il terminale** inviando comandi via WebSocket
-
-### Monitoraggio
-
-Per vedere i log dell'estensione:
-1. Vai su `View` → `Output`
-2. Seleziona `Claude Terminal Bridge` dal dropdown
-3. Vedrai tutti i log di connessione ed esecuzione comandi
-
-## 🏗️ Architettura
-
-```text
-┌─────────────────┐         WebSocket          ┌──────────────────┐
-│   MCP Server    │ <----------------------->   │  VSCode Extension │
-│ (da implementare)│      JSON Messages        │  (questa repo)   │
-└─────────────────┘                             └──────────────────┘
-                                                         │
-                                                         │ VSCode API
-                                                         ▼
-                                                ┌──────────────────┐
-                                                │  VSCode Terminal │
-                                                └──────────────────┘
-```
-
-## � Protocollo MCP
-
-Per i dettagli completi su come implementare il server MCP e comunicare con questa estensione, consulta:
-
-**📖 [mcp_requirements.md](mcp_requirements.md)** - Specifiche complete del protocollo
-
-Breve sommario delle operazioni supportate:
-- **ping** - Verifica connessione
-- **create_terminal** - Crea nuovo terminale
-- **execute** - Esegui comando shell
-- **close_terminal** - Chiudi terminale
-
-## 🛠️ Sviluppo
-
-### Struttura del Progetto
-
-```text
-claude-terminal-bridge/
-├── src/
-│   ├── extension.ts          # Codice principale dell'estensione
-│   └── test/
-│       └── extension.test.ts
-├── package.json              # Manifest dell'estensione
-├── tsconfig.json            # Configurazione TypeScript
-├── mcp_requirements.md      # Specifiche protocollo MCP
-├── TESTING.md              # Guida al testing
-└── README.md               # Questo file
-```
-
-### Build
-
-```bash
-npm run compile      # Compila TypeScript
-npm run watch        # Watch mode per sviluppo
-npm test            # Esegui test
-```
-
-### Debug
-
-1. Apri la cartella in VSCode
-2. Premi `F5` per avviare l'Extension Development Host
-3. Apri l'Output Channel "Claude Terminal Bridge" per vedere i log
-
-## 📝 Note Tecniche
-
-### Limitazioni VSCode API
-
-⚠️ **IMPORTANTE**: L'API di VSCode non fornisce accesso diretto all'output del terminale.
-
-Questa implementazione:
-- ✅ Invia comandi al terminale
-- ✅ Riceve conferma dell'esecuzione
-- ❌ Non cattura direttamente l'output in tempo reale
-
-Per catturare l'output in tempo reale, è necessario implementare un `Pseudoterminal` personalizzato.
-
-### Auto-Riconnessione
-
-L'estensione tenta automaticamente di riconnettersi ogni 5 secondi in caso di disconnessione (se `autoConnect` è abilitato).
-
-## 🐛 Troubleshooting
-
-### L'estensione non si connette
-
-1. Verifica che il server MCP sia in esecuzione
-2. Controlla l'URL nelle impostazioni: `Settings` → `Claude Terminal Bridge` → `Mcp Server Url`
-3. Verifica che non ci siano firewall che bloccano la porta
-4. Controlla i log nell'Output Channel
-
-### I comandi non vengono eseguiti
-
-1. Verifica che il terminale sia stato creato
-2. Controlla i log per errori
-3. Verifica che il `terminalId` sia corretto
-4. Assicurati che il formato JSON del messaggio sia valido
-
-### Status bar non si aggiorna
-
-1. Ricarica la finestra VSCode (`Ctrl+R` o `Cmd+R`)
-2. Verifica che l'estensione sia attivata
-3. Controlla la console developer per errori
-
-## 🤝 Contribuire
-
-Le pull request sono benvenute! Per modifiche importanti, apri prima un issue per discutere cosa vorresti cambiare.
-
-## 📄 Licenza
-
-[MIT](LICENSE)
-
-## 🔗 Link Utili
-
-- [VSCode Extension API](https://code.visualstudio.com/api)
-- [MCP Protocol](https://modelcontextprotocol.io/)
-- [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
+| Command | Description |
+|---------|-------------|
+| `Claude Terminal Bridge: Start WebSocket Server` | Start the WebSocket server manually |
+| `Claude Terminal Bridge: Stop WebSocket Server` | Stop the WebSocket server |
+| `Claude Terminal Bridge: Show Connection Status` | Display current connection status |
 
 ---
 
-**⚠️ Nota di Sicurezza**: Questa estensione consente l'esecuzione di comandi nel terminale da remoto. Usare solo in ambienti fidati e con server MCP sicuri.
+## 🏗️ Architecture
+
+```
+┌─────────────────────┐
+│   MCP Client        │  Your AI assistant, automation script,
+│   (Your Server)     │  or custom application
+└──────────┬──────────┘
+           │
+           │ WebSocket (JSON)
+           │ ws://localhost:3000
+           │
+┌──────────▼──────────┐
+│  VSCode Extension   │  This extension (runs WebSocket server)
+│  Terminal Bridge    │
+└──────────┬──────────┘
+           │
+           │ VSCode API
+           │
+┌──────────▼──────────┐
+│  VSCode Terminals   │  Native VSCode terminal instances
+└─────────────────────┘
+```
+
+> **Note**: Unlike typical MCP setups, this extension **runs the server**. Your MCP client **connects to** this extension.
+
+---
+
+## 🔌 MCP Protocol
+
+### Request Format (Client → Extension)
+
+```json
+{
+  "type": "create_terminal" | "execute" | "close_terminal" | "ping",
+  "id": "unique-request-id",
+  "data": {
+    // Request-specific data
+  }
+}
+```
+
+### Response Format (Extension → Client)
+
+```json
+{
+  "type": "terminal_created" | "success" | "error" | "pong",
+  "id": "same-request-id",
+  "data": {
+    // Response-specific data
+  }
+}
+```
+
+### Supported Operations
+
+#### 1. Create Terminal
+```json
+{
+  "type": "create_terminal",
+  "id": "terminal-1",
+  "data": {
+    "terminalName": "Build Terminal"
+  }
+}
+```
+
+#### 2. Execute Command
+```json
+{
+  "type": "execute",
+  "id": "cmd-1",
+  "data": {
+    "command": "npm install",
+    "terminalId": "terminal-1"
+  }
+}
+```
+
+#### 3. Close Terminal
+```json
+{
+  "type": "close_terminal",
+  "id": "close-1",
+  "data": {
+    "terminalId": "terminal-1"
+  }
+}
+```
+
+#### 4. Ping
+```json
+{
+  "type": "ping",
+  "id": "ping-1"
+}
+```
+
+### Complete Protocol Documentation
+
+For detailed protocol specifications and implementation examples:
+
+- **[MCP Protocol Specification](mcp_requirements.md)** - Complete request/response reference
+- **[MCP Server Implementation Guide](MCP_SERVER_GUIDE.md)** - Step-by-step server setup
+
+---
+
+## 📸 Screenshots
+
+### Status Bar Integration
+<img src="images/status-bar-connected.png" alt="Status bar showing connected state" width="400">
+
+### Terminal Creation
+<img src="images/terminal-creation.png" alt="Terminal being created via WebSocket" width="600">
+
+### Command Execution
+<img src="images/command-execution.png" alt="Commands being executed in terminal" width="600">
+
+### Output Channel Logs
+<img src="images/output-channel.png" alt="Extension logs in Output channel" width="600">
+
+---
+
+## 🛠️ Development
+
+### Prerequisites
+
+- Node.js 18+
+- VSCode 1.104.0+
+- TypeScript 5.9+
+
+### Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Gabry848/claude-terminal-bridge.git
+cd claude-terminal-bridge
+
+# Install dependencies
+npm install
+
+# Compile TypeScript
+npm run compile
+```
+
+### Running in Development
+
+1. Open the project in VSCode
+2. Press `F5` to launch Extension Development Host
+3. The extension will be loaded in a new VSCode window
+4. View logs: `View` → `Output` → `Claude Terminal Bridge`
+
+### Testing
+
+```bash
+# Run linter
+npm run lint
+
+# Run tests
+npm test
+
+# Watch mode
+npm run watch
+```
+
+### Building VSIX
+
+```bash
+# Install vsce (first time only)
+npm install -g @vscode/vsce
+
+# Create package
+vsce package
+
+# Output: claude-terminal-bridge-X.X.X.vsix
+```
+
+---
+
+## 📝 Technical Notes
+
+### ⚠️ VSCode API Limitations
+
+**Important**: The VSCode Terminal API does not provide direct access to terminal output.
+
+| Feature | Status |
+|---------|--------|
+| Send commands to terminal | ✅ Supported |
+| Receive command execution confirmation | ✅ Supported |
+| Capture real-time terminal output | ❌ Not supported by VSCode API |
+
+**Workaround**: To capture output, you would need to implement a custom Pseudoterminal with `vscode.window.createTerminal({ pty: customPty })`.
+
+### Terminal ID Management
+
+- When creating a terminal, the request `id` becomes the `terminalId`
+- Store the returned `terminalId` for subsequent operations
+- Terminal IDs are unique per terminal instance
+- Terminals are automatically cleaned up when closed
+
+### Auto-Reconnection Behavior
+
+- Reconnection attempts occur every 5 seconds
+- Only active when `autoConnect` is enabled
+- Failed attempts are silent when `silentAutoConnect` is true
+
+---
+
+## 🐛 Troubleshooting
+
+<details>
+<summary><strong>Server won't start</strong></summary>
+
+- Check if port 3000 is already in use: `netstat -an | findstr 3000` (Windows) or `lsof -i :3000` (Mac/Linux)
+- Try changing the port in settings
+- Check firewall rules
+- View logs in Output Channel: `View` → `Output` → `Claude Terminal Bridge`
+</details>
+
+<details>
+<summary><strong>Client can't connect</strong></summary>
+
+- Verify the extension is running (check status bar)
+- Ensure the WebSocket URL is correct (`ws://localhost:3000`)
+- Disable any proxy settings that might interfere
+- Check VSCode settings for the correct port configuration
+</details>
+
+<details>
+<summary><strong>Commands not executing</strong></summary>
+
+- Verify the terminal was created successfully
+- Check that you're using the correct `terminalId`
+- Ensure JSON message format is valid
+- Look for error responses from the extension
+</details>
+
+<details>
+<summary><strong>Status bar not updating</strong></summary>
+
+- Reload VSCode window (`Ctrl+R` or `Cmd+R`)
+- Disable and re-enable the extension
+- Check for conflicting extensions
+</details>
+
+---
+
+## 🔒 Security Considerations
+
+⚠️ **Important**: This extension allows remote command execution in VSCode terminals.
+
+**Recommendations:**
+- ✅ Use only in trusted development environments
+- ✅ Implement authentication in your MCP client
+- ✅ Use WSS (secure WebSocket) in production
+- ✅ Validate and sanitize all commands
+- ✅ Run in isolated/sandboxed environments when possible
+- ❌ Do not expose to public networks
+- ❌ Do not use with untrusted MCP clients
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) before submitting PRs.
+
+### Development Process
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- [Model Context Protocol](https://modelcontextprotocol.io/) - MCP specification
+- [VSCode Extension API](https://code.visualstudio.com/api) - VSCode documentation
+- [ws](https://github.com/websockets/ws) - WebSocket library
+
+---
+
+## 📞 Support & Feedback
+
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/Gabry848/claude-terminal-bridge/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/Gabry848/claude-terminal-bridge/discussions)
+- ⭐ **Rate on Marketplace**: [Leave a Review](https://marketplace.visualstudio.com/items?itemName=YOUR_PUBLISHER.claude-terminal-bridge)
+- 📧 **Email**: your.email@example.com
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] Real-time output capture using Pseudoterminal
+- [ ] Built-in authentication support
+- [ ] Terminal session persistence
+- [ ] Command history and replay
+- [ ] Multi-workspace support
+- [ ] WebSocket Secure (WSS) support
+- [ ] Terminal output streaming API
+- [ ] Performance metrics and monitoring
+
+---
+
+<p align="center">
+  Made with ❤️ for the VSCode community
+</p>
+
+<p align="center">
+  <a href="https://github.com/Gabry848/claude-terminal-bridge">GitHub</a> •
+  <a href="https://marketplace.visualstudio.com/items?itemName=YOUR_PUBLISHER.claude-terminal-bridge">Marketplace</a> •
+  <a href="CHANGELOG.md">Changelog</a>
+</p>

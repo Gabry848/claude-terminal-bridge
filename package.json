@@ -3,6 +3,16 @@
   "displayName": "Claude Terminal Bridge",
   "description": "Let Claude control your VSCode terminal via MCP",
   "version": "0.0.1",
+  "publisher": "YOUR_PUBLISHER",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/claude-terminal-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YOUR_USERNAME/claude-terminal-bridge/issues"
+  },
+  "homepage": "https://github.com/YOUR_USERNAME/claude-terminal-bridge#readme",
+  "icon": "images/icon.png",
   "engines": {
     "vscode": "^1.104.0"
   },

@@ -1,3 +1,4 @@
+# Development files
 .vscode/**
 .vscode-test/**
 src/**
@@ -9,3 +10,27 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 **/.vscode-test.*
+.markdownlint.json
+
+# Build artifacts
+out/test/**
+
+# Documentation (keep minimal docs, exclude development docs)
+CLAUDE.md
+CONTRIBUTING.md
+mcp_requirements.md
+MCP_SERVER_GUIDE.md
+
+# Examples (users can find these on GitHub)
+examples/**
+
+# Images README (not needed in package)
+images/README.md
+images/.gitkeep
+
+# Development files
+*.log
+*.vsix
+.DS_Store
+node_modules/**
+.github/**
